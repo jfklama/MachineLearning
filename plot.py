@@ -45,33 +45,13 @@ def makePlots(sess, myDataManipulations):
     pT = features[:,1]
     Eta = features[:,0]
 
-    #featuresCopy[:,featuresNames.index("leg_2_byIsolationMVArun2v1DBnewDMwLTraw2017v2")] = 0
-    #featuresCopy[:,featuresNames.index("leg_2_deepTau2017v1tauVSall")] = 0
-    #featuresCopy[:,featuresNames.index("leg_2_deepTau2017v1tauVSjet")] = 0
-    #featuresCopy[:,featuresNames.index("leg_2_DPFTau_2016_v1tauVSall")] = 0
-
     result = sess.run([y, yTrue, accuracy], feed_dict={x: featuresCopy, yTrue: labels, dropout_prob: 0.0, trainingMode: False})
     modelResult = result[0]
     modelResult = np.reshape(modelResult,(1,-1))[0]
 
-    modelResults = {"training": modelResult
-                    #"DPFv1":features[:,featuresNames.index("leg_2_DPFTau_2016_v1tauVSall")],
-                    #"deepTau":features[:,featuresNames.index("leg_2_deepTau2017v1tauVSall")],
-                    #"MVA2017v2":features[:,featuresNames.index("leg_2_byIsolationMVArun2v1DBnewDMwLTraw2017v2")],
-    }
+    modelResults = {"training": modelResult}
 
     print("Test sample accuracy:",result[2])
-
-    #modelResult = features[:,featuresNames.index("leg_2_byIsolationMVArun2v1DBoldDMwLTraw2017v2")]
-    '''
-    print("fetures:",featuresNames)
-    modelParameters   = tf.trainable_variables()
-    for aPar in modelParameters:
-        print(aPar)
-        print(aPar.name, aPar.eval())
-    print("Result:",modelResult[0])
-    print("Features:",features[0,:])
-    '''
 
     indexesS = labels==1
     signalResponse = modelResult[indexesS]

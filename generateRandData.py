@@ -10,7 +10,7 @@ def sigmoid(x):
     return  1/(1 + np.exp(-(3*x-6)) )
 
 def lognormal(x, mu, sigma):
-    pdf = (np.exp(-(np.log(x) - mu)**2 / (2 * sigma**2)) / (x * sigma * np.sqrt(2 * np.pi)))
+    pdf = (np.exp(-(np.log(x - mu))**2 / (2 * sigma**2)) / (x * sigma * np.sqrt(2 * np.pi)))
     return pdf
 
 
@@ -32,17 +32,20 @@ def getEtaPDF(Eta):
 
 def getPtPDF(pT):
     #Eta = np.random.uniform(0,2.2, nData)
-    PDF = 500*lognormal(pT, 1, 1)
+    PDF = 500*lognormal(pT, 0, 1)
     return PDF / np.linalg.norm(PDF)
     #return PDF
 
 def getLabels(PDF):
-    labels = PDF
-    for i in labels:
-        if i >= 0.5:
-            i = 1.
-        if i<0.5:
-            i = 0.
+    labels = np.copy(PDF)
+    idx = 0
+    while idx < len(labels):
+        randNum = np.random.uniform(0,1)
+        if randNum <= labels[idx]:
+            labels[idx] = 1
+        else:
+            labels[idx] = 0
+        idx += 1
     return labels
 
 '''
@@ -57,10 +60,19 @@ y2 = getPtPDF(pT)
 PDF = getEtaPDF(Eta)+getPtPDF(pT)
 PDF = PDF / np.linalg.norm(PDF)
 
-labels = PDF
-labels[ labels>=0.05 ]=1
+#labels = PDF
+#labels[ labels>=0.05 ]=1
 
-print(PDF, labels)
-plt.plot( pT, PDF )
+print(PDF, getLabels(PDF))
+plt.figure(1)
+plt.scatter(pT, PDF, s=1)
+plt.scatter( pT, getLabels(PDF), s=2 )
+plt.legend(loc=0)
+plt.show(block=False)
+
+plt.figure(2)
+plt.scatter(Eta, PDF, s=1)
+plt.scatter( Eta, getLabels(PDF), s=2 )
+plt.legend(loc=0)
 plt.show()
 '''

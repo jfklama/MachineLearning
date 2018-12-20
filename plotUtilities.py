@@ -33,6 +33,18 @@ def plotHistogram(xSurvive, xDied, xAll, name, nBins, normed, axisRange):
 #####################################################################
 #####################################################################
 #####################################################################
+def plotFR(x, modelResult, doBlock=True):
+
+    fig = plt.scatter(x, modelResult)
+
+    fig.set_title("")
+    fig.set_xlabel("Variable")
+    fig.set_ylabel("Model Prediction")
+
+    plt.show(block=doBlock)
+#####################################################################
+#####################################################################
+#####################################################################
 def plotVariable(x, y):
 
     print (x.shape, y.shape)
@@ -67,16 +79,18 @@ def plotDiscriminant(modelResult, labels, plotTitle, doBlock=True):
 
     fig, (axis0, axis1) = plt.subplots(nrows=1, ncols=2, figsize=(9, 4), num = plotTitle)
 
-    axis0.scatter(modelResult, labels, c="b")    
+    axis0.scatter(modelResult, labels, c="b")
     axis0.set_title("")
     axis0.set_xlabel("Prediction")
     axis0.set_ylabel("Target")
-    
-    error = (modelResult - labels)/labels
+
+    #error = (modelResult - labels)/labels
+    error = (modelResult - labels)
     axis1.hist(error, bins=60, range=(-1,1))
-    axis1.set_xlabel("(Prediction - Target)/Target")
+    #axis1.set_xlabel("(Prediction - Target)/Target")
+    axis1.set_xlabel("Prediction - Target")
     axis1.set_title("Pull")
-    
+
     plt.show(block=doBlock)
 #####################################################################
 #####################################################################

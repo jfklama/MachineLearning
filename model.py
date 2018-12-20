@@ -31,8 +31,7 @@ class Model:
         lastLayer = self.myLayers[-1]
 
         with tf.name_scope('dropout'):
-            keep_prob = tf.placeholder(tf.float32)
-            aLayer = tf.layers.dropout(inputs = lastLayer, rate = keep_prob)
+            aLayer = tf.layers.dropout(inputs = lastLayer, rate = self.dropout_prob, training=self.trainingMode)
             self.myLayers.append(aLayer)
 
     def addOutputLayer(self):
@@ -42,11 +41,12 @@ class Model:
         aLayer = tf.layers.dense(inputs = lastLayer, units = 1,
                                      name = 'output',
                                      activation = tf.identity)
-                                     #activation = tf.nn.softmax)
+                                     #activation = tf.nn.sigmoid)
         self.myLayers.append(aLayer)
 
     def defineOptimizationStrategy(self):
         with tf.name_scope('train'):
+            samplesWeights = 1.0
             #absolute_difference = tf.losses.absolute_difference(labels=self.yTrue, predictions=self.myLayers[-1])
             #mean_squared_error = tf.losses.mean_squared_error(labels=self.yTrue, predictions=self.myLayers[-1])
             sigmoid_cross_entropy = tf.losses.sigmoid_cross_entropy(multi_class_labels=self.yTrue, logits=self.myLayers[-1])
@@ -57,15 +57,19 @@ class Model:
             #underestimateLoss = tf.to_float(tf.less(self.myLayers[-1], self.yTrue))
             #tf.losses.add_loss(underestimateLoss)
             lossFunction = tf.losses.get_total_loss()
-            train_step = tf.train.AdamOptimizer(self.learning_rate).minimize(lossFunction)
+            #train_step = tf.train.AdamOptimizer(self.learning_rate).minimize(lossFunction)
+
+            update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
+            with tf.control_dependencies(update_ops):
+                train_step = tf.train.AdamOptimizer(self.learning_rate).minimize(lossFunction)
 
         with tf.name_scope('performance'):
-            y = self.myLayers[-1]
-            pull = (y - self.yTrue)/self.yTrue
-            pull_mean, pull_variance = tf.nn.moments(pull, axes=[0])
+            y = tf.nn.sigmoid(self.myLayers[-1])
+            accuracy = tf.metrics.accuracy(self.yTrue, y>0.5, weights=samplesWeights)
+
 
         tf.summary.scalar('loss', lossFunction)
-        tf.summary.scalar('pull_rms', tf.sqrt(pull_variance[0]))
+        #tf.summary.scalar('pull_rms', tf.sqrt(pull_variance[0]))
 
     def __init__(self, x, yTrue, nNeurons, learning_rate, lambdaLagrange):
 
@@ -82,6 +86,9 @@ class Model:
 
         self.learning_rate = learning_rate
         self.lambdaLagrange = lambdaLagrange
+
+        self.trainingMode = tf.placeholder(tf.bool, name="trainingMode")
+        self.dropout_prob = tf.placeholder(tf.float32, name="dropout_prob")
 
         self.addFCLayers()
         self.addDropoutLayer()

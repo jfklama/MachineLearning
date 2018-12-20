@@ -1,6 +1,12 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+from matplotlib import cm
+from matplotlib.ticker import LinearLocator, FormatStrFormatter
+from sklearn.model_selection import KFold
+from sklearn import preprocessing
 
 import argparse
 import os
@@ -11,6 +17,7 @@ import numpy as np
 from dataManipulations import *
 from plotUtilities import *
 from model import *
+from generateRandData import *
 
 FLAGS = None
 
@@ -22,43 +29,140 @@ deviceName = None
 def makePlots(sess, myDataManipulations):
     #Fetch operations
     x = tf.get_default_graph().get_operation_by_name("input/x-input").outputs[0]
-    y = tf.get_default_graph().get_operation_by_name("model/output/Identity").outputs[0]    
+    y = tf.get_default_graph().get_operation_by_name("model/performance/Sigmoid").outputs[0]
     yTrue = tf.get_default_graph().get_operation_by_name("input/y-input").outputs[0]
-    keep_prob = tf.get_default_graph().get_operation_by_name("model/dropout/Placeholder").outputs[0]
+    dropout_prob = tf.get_default_graph().get_operation_by_name("model/dropout_prob").outputs[0]
+    trainingMode = tf.get_default_graph().get_operation_by_name("model/trainingMode").outputs[0]
+    accuracy = tf.get_default_graph().get_operation_by_name("model/performance/accuracy/update_op").outputs[0]
 
-    iFold = 0 
-    aTrainIterator, aValidationIterator = myDataManipulations.getCVFold(sess, iFold)
-    numberOfBatches = myDataManipulations.numberOfBatches
-   
-    xs, ys = makeFeedDict(sess, aTrainIterator)
-   
-    result = sess.run([x, y, yTrue], feed_dict={x: xs, yTrue: ys, keep_prob: 1.0})
-    modelInput = result[0]
-    modelResult = result[1]
-    model_fastMTT = modelInput[:,1]
-    model_fastMTT = np.reshape(model_fastMTT,(-1,1))
-    labels = result[2]
-
-    print(len(labels))
-
-    pull = (modelResult - labels)/labels
-    print("Model: NN",
-          "mean pull:", np.mean(pull),
-          "pull RMS:", np.std(pull, ddof=1))
-
-    plotDiscriminant(modelResult, labels, "Training", doBlock=False)
-
-    model_fastMTT = myDataManipulations.fastMTT
+    features = myDataManipulations.features
+    featuresCopy = np.copy(features)
+    #featuresNames = myDataManipulations.featuresNames
     labels = myDataManipulations.labels
+    nData = myDataManipulations.nData
+    #truePDF = myDataManipulations.PDF
 
-    print(len(labels))
+    pT = features[:,1]
+    Eta = features[:,0]
 
-    pull = ( model_fastMTT - labels)/labels
-    print("Model: fastMTT",
-          "mean pull:", np.mean(pull),
-          "pull RMS:", np.std(pull, ddof=1))
+    #featuresCopy[:,featuresNames.index("leg_2_byIsolationMVArun2v1DBnewDMwLTraw2017v2")] = 0
+    #featuresCopy[:,featuresNames.index("leg_2_deepTau2017v1tauVSall")] = 0
+    #featuresCopy[:,featuresNames.index("leg_2_deepTau2017v1tauVSjet")] = 0
+    #featuresCopy[:,featuresNames.index("leg_2_DPFTau_2016_v1tauVSall")] = 0
 
-    plotDiscriminant(model_fastMTT, labels, "fastMTT", doBlock=True)
+    result = sess.run([y, yTrue, accuracy], feed_dict={x: featuresCopy, yTrue: labels, dropout_prob: 0.0, trainingMode: False})
+    modelResult = result[0]
+    modelResult = np.reshape(modelResult,(1,-1))[0]
+
+    modelResults = {"training": modelResult
+                    #"DPFv1":features[:,featuresNames.index("leg_2_DPFTau_2016_v1tauVSall")],
+                    #"deepTau":features[:,featuresNames.index("leg_2_deepTau2017v1tauVSall")],
+                    #"MVA2017v2":features[:,featuresNames.index("leg_2_byIsolationMVArun2v1DBnewDMwLTraw2017v2")],
+    }
+
+    print("Test sample accuracy:",result[2])
+
+    #modelResult = features[:,featuresNames.index("leg_2_byIsolationMVArun2v1DBoldDMwLTraw2017v2")]
+    '''
+    print("fetures:",featuresNames)
+    modelParameters   = tf.trainable_variables()
+    for aPar in modelParameters:
+        print(aPar)
+        print(aPar.name, aPar.eval())
+    print("Result:",modelResult[0])
+    print("Features:",features[0,:])
+    '''
+
+    indexesS = labels==1
+    signalResponse = modelResult[indexesS]
+
+    indexesB = labels==0
+    backgroundResponse = modelResult[indexesB]
+
+    plt.figure(1)
+    plt.hist(signalResponse, bins = 20, label="fake tau")
+    #plt.hist(backgroundResponse, bins=20, label="fake tau")
+    plt.legend(loc=2)
+    plt.show(block=False)
+
+    plt.figure(2)
+    #plt.hist(signalResponse, bins = 20, label="true tau")
+    plt.hist(backgroundResponse, bins=20, label="true tau")
+    plt.legend(loc=2)
+    plt.show()
+
+    '''
+    plt.figure(3)
+    for model, aResult in modelResults.items():
+        print('ROC AUC score for {} model: '.format(model), 1.0 - roc_auc_score(labels, aResult))
+        fpr, tpr, thr = roc_curve(labels, aResult, pos_label=1)
+        plt.semilogy(tpr, fpr, label=model)
+        plt.grid(True)
+        plt.xlim((0.2, 1.0))
+        plt.ylim((2E-4, 0.2))
+        plt.ylabel('False positive rate')
+        plt.xlabel('True positive rate')
+
+    plt.legend(loc=2)
+    plt.show()
+    '''
+
+    print(labels.shape, pT.shape)
+
+    nbins = 8
+    pT_bins = np.empty( int(len(pT)*nbins/(nData)) )
+    Eta_bins = np.empty( int(len(Eta)*nbins/(nData)) )
+    trueFakesPt = np.zeros( int(len(pT)*nbins/(nData)) )
+    trueFakesEta = np.zeros( int(len(Eta)*nbins/(nData)) )
+
+    print(labels)
+
+    idx = 0
+    i = 0
+    while idx < len(pT_bins):
+        while i < nData/nbins*(1+idx):
+            if labels[i] ==1:
+                trueFakesPt[idx] += 1
+            i += 1
+        pT_bins[idx] = idx*(80/nbins) + 20
+        idx += 1
+
+    idx = 0
+    i = 0
+    while idx < len(Eta_bins):
+        while i < nData/nbins*(1+idx):
+            if labels[i] ==1:
+                trueFakesEta[idx] += 1
+            i += 1
+        Eta_bins[idx] = idx*(2.3/nbins)
+        idx += 1
+
+    trueFakesPt = 100*trueFakesPt/(nData)
+    trueFakesEta = 100*trueFakesEta/(nData)
+
+    print(trueFakesPt, trueFakesEta)
+
+    plt.figure(1)
+    plt.scatter(pT_bins, trueFakesPt, label = 'Input N_{fake}/N_{all}')
+    #plt.scatter(features[:,1], truePDF, s=3, label = 'True PDF input')
+    plt.scatter(pT, modelResult, s=1, label = 'Model prediction')
+    plt.xlabel('pT')
+
+    plt.legend(loc=0)
+    plt.show(block=False)
+
+    plt.figure(2)
+    plt.scatter(Eta_bins, trueFakesEta, label = 'Input N_{fake}/N_{all}')
+    #plt.scatter(features[:,1], truePDF, s=3, label = 'True PDF input')
+    plt.scatter(Eta, modelResult, s=1, label = 'Model prediction')
+    plt.xlabel('Eta')
+
+    plt.legend(loc=0)
+    plt.show()
+
+
+
+
 
 ##############################################################################
 ##############################################################################
@@ -72,15 +176,18 @@ def plot():
             print(d.name)
 
         nEpochs = 1
-        batchSize = 100000
+        batchSize = 100
         nFolds = 2
-        fileName = FLAGS.test_data_file
+        #fileName = FLAGS.test_data_file
 
-        myDataManipulations = dataManipulations(fileName, nFolds, nEpochs, batchSize, smearMET=False)
+        myDataManipulations = dataManipulations(nFolds, nEpochs, batchSize)
 
         tf.saved_model.loader.load(sess, [tf.saved_model.tag_constants.SERVING], FLAGS.model_dir)
-        
-        makePlots(sess, myDataManipulations)            
+
+        init_local = tf.local_variables_initializer()
+        sess.run([init_local])
+
+        makePlots(sess, myDataManipulations)
 ##############################################################################
 ##############################################################################
 ##############################################################################
@@ -92,11 +199,6 @@ def main(_):
 ##############################################################################
 if __name__ == '__main__':
   parser = argparse.ArgumentParser()
-
-  parser.add_argument('--test_data_file', type=str,
-      default=os.path.join(os.getenv('PWD', './'),
-                           'data/htt_features.pkl'),
-      help='Directory for storing training data')
 
   parser.add_argument('--model_dir', type=str,
       default=os.path.join(os.getenv('PWD', './'),

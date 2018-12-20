@@ -22,15 +22,17 @@ class dataManipulations:
         #print("global params: ", global_params.keys())
         #print("object properties:",properties.keys())
 
-        nData = 50000
+        nData = 500000
 
         #Create data and PDF
         Eta = getRandomEta(nData)
         Pt = getRandomPt(nData)
-        PDF = getEtaPDF(Eta)+getPtPDF(Pt)
+        PDF = getEtaPDF(Eta)*getPtPDF(Pt)
+        #print(np.linalg.norm(PDF))
         PDF = PDF / np.linalg.norm(PDF)
-
+        #print(np.linalg.norm(PDF))
         #plt.plot( Pt, PDF )
+        #plt.scatter( Pt, getLabels(PDF), s=1 )
         #plt.show()
 
         #print(PDF)
@@ -79,15 +81,16 @@ class dataManipulations:
         PDF = features[:,0]
         features = features[:,1:]
 
-        labels = PDF
-        labels[ labels >= 0.004 ] = 1
-        labels[ labels < 0.004 ] = 0
+        labels = getLabels(PDF)
         #labels = np.reshape(labels, (-1,1))
         #np.transpose(labels)
         #labels = np.hstack((labels))
 
         #print(Pt[:10], Eta[:10], PDF[:10], labels[:10])
-        print(labels)
+        print(labels[:50])
+
+        #plt.plot( Pt, labels )
+        #plt.show()
 
         print("Input data shape:",features.shape)
 
@@ -101,6 +104,9 @@ class dataManipulations:
         self.features = features
         self.labels = labels
         self.PDF = PDF
+        self.Pt = Pt
+        self.Eta = Eta
+        self.nData = nData
 
     def makeCVFoldGenerator(self):
 

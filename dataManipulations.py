@@ -15,12 +15,6 @@ class dataManipulations:
 
     def getNumpyMatricesFromRawData(self):
 
-        #legs, jets, global_params, properties = pd.read_pickle(self.fileName)
-
-        #print("no of legs: ", len(legs))
-        #print("no of jets: ", len(jets))
-        #print("global params: ", global_params.keys())
-        #print("object properties:",properties.keys())
 
         nData = 500000
 
@@ -28,69 +22,19 @@ class dataManipulations:
         Eta = getRandomEta(nData)
         Pt = getRandomPt(nData)
         PDF = getEtaPDF(Eta)*getPtPDF(Pt)
-        #print(np.linalg.norm(PDF))
-        PDF = PDF / np.linalg.norm(PDF)
-        #print(np.linalg.norm(PDF))
-        #plt.plot( Pt, PDF )
-        #plt.scatter( Pt, getLabels(PDF), s=1 )
-        #plt.show()
-
-        #print(PDF)
-
-        #np.random.shuffle(Eta)
-        #np.random.shuffle(Pt)
-        #np.random.shuffle(PDF)
-
+        #PDF = PDF / np.linalg.norm(PDF) #normalization
 
         Eta = np.reshape(Eta, (-1,1))
         Pt = np.reshape(Pt, (-1,1))
         PDF = np.reshape(PDF, (-1,1))
 
-        '''
-        Eta = np.transpose(Eta)
-        Pt = np.transpose(Pt)
-        PDF = np.transpose(PDF)
-        '''
-
-        self.Eta = Eta
-        self.Pt = Pt
-
         features = np.hstack((PDF, Eta, Pt))
-
-        #Select events with MET>10
-        #index = met[:,0]>10
-        #features = features[index]
-
-        '''
-        index = features[:,0]<250
-        features = features[index]
-
-        index = features[:,0]>50
-        features = features[index]
-        '''
-        '''
-        index = features[:,0]>85
-        features = features[index]
-
-        index = features[:,0]<95
-        features = features[index]
-        '''
 
         np.random.shuffle(features)
 
         PDF = features[:,0]
-        features = features[:,1:]
-
+        features = features[:,1:] #only pT and Eta are features
         labels = getLabels(PDF)
-        #labels = np.reshape(labels, (-1,1))
-        #np.transpose(labels)
-        #labels = np.hstack((labels))
-
-        #print(Pt[:10], Eta[:10], PDF[:10], labels[:10])
-        print(labels[:50])
-
-        #plt.plot( Pt, labels )
-        #plt.show()
 
         print("Input data shape:",features.shape)
 

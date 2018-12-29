@@ -24,7 +24,6 @@ deviceName = None
 def runCVFold(sess, iFold, myDataManipulations, myTrainWriter, myValidationWriter):
     #Fetch operations
     x = tf.get_default_graph().get_operation_by_name("input/x-input").outputs[0]
-    #y = tf.get_default_graph().get_operation_by_name("model/output/Identity").outputs[0]
     y = tf.get_default_graph().get_operation_by_name("model/performance/Sigmoid").outputs[0]
 
     yTrue = tf.get_default_graph().get_operation_by_name("input/y-input").outputs[0]
@@ -33,9 +32,6 @@ def runCVFold(sess, iFold, myDataManipulations, myTrainWriter, myValidationWrite
     trainingMode = tf.get_default_graph().get_operation_by_name("model/trainingMode").outputs[0]
 
     train_step = tf.get_default_graph().get_operation_by_name("model/train/Adam")
-
-    #pull_mean = tf.get_default_graph().get_operation_by_name("model/performance/moments/mean").outputs[0]
-    #pull_variance = tf.get_default_graph().get_operation_by_name("model/performance/moments/variance").outputs[0]
 
     loss = tf.get_default_graph().get_operation_by_name("model/train/total_loss").outputs[0]
     lossL2 = tf.get_default_graph().get_operation_by_name("model/train/get_regularization_penalty").outputs[0]
@@ -60,16 +56,12 @@ def runCVFold(sess, iFold, myDataManipulations, myTrainWriter, myValidationWrite
 
             #Evaluate training performance
             if(iEpoch%10==0 and iBatch%numberOfBatches==0):
-                #result = sess.run([pull_variance, mergedSummary, loss], feed_dict={x: xs, yTrue: ys, keep_prob: 1.0})
-                #result = sess.run([mergedSummary, loss], feed_dict={x: xs, yTrue: ys, keep_prob: 1.0})
                 result = sess.run([mergedSummary, accuracy, lossL2, loss], feed_dict={x: xs, yTrue: ys, dropout_prob: 0.0, trainingMode: False})
                 iStep = iEpoch + iFold*FLAGS.max_epoch
-                #variance = result[0][0]
                 trainSummary = result[0]
                 modelLoss = result[3]
                 myTrainWriter.add_summary(trainSummary, iStep)
                 print("Epoch number:",iEpoch,
-                      #"pull RMS:", np.sqrt(variance),
                       "total loss:",modelLoss,
                       "Train accuracy:", result[1],
                       "regularisation loss",result[2])
@@ -80,11 +72,8 @@ def runCVFold(sess, iFold, myDataManipulations, myTrainWriter, myValidationWrite
     #Evaluate performance on validation data
     try:
         xs, ys = makeFeedDict(sess, aValidationIterator)
-        #result = sess.run([pull_mean, pull_variance,  mergedSummary],
         result = sess.run([accuracy, mergedSummary],
                         feed_dict={x: xs, yTrue: ys, dropout_prob: 0.0, trainingMode: False})
-        #mean = result[0]
-        #variance = result[1]
         accuracyValue = result[0]
         validationSummary = result[1]
         iStep = (iFold+1)*FLAGS.max_epoch - 1
@@ -93,8 +82,6 @@ def runCVFold(sess, iFold, myDataManipulations, myTrainWriter, myValidationWrite
         print("Validation. Fold:",iFold,
               "Epoch:",iEpoch,
               "Accuracy:",accuracyValue)
-              #"pull mean:", mean,
-              #"pull RMS:", np.sqrt(variance))
 
         result = sess.run([y, yTrue], feed_dict={x: xs, yTrue: ys, dropout_prob: 0.0, trainingMode: False})
         modelResult = result[0]
@@ -116,12 +103,11 @@ def train():
     for d in devices:
         print(d.name)
 
-    #nFolds = 2 #data split into equal training and validation parts
-    nFolds = 5
+    #nFolds = 2         #data split into equal training and validation parts
+    nFolds = 5          #5 folds with 4 hidden layers works faster
     nEpochs = FLAGS.max_epoch
     #batchSize = 128
     batchSize = 4096
-    #fileName = FLAGS.train_data_file
     myDataManipulations = dataManipulations(nFolds, nEpochs, batchSize)
     numberOfFeatures = myDataManipulations.numberOfFeatures
     #nNeurons = [numberOfFeatures, 128, 128]
@@ -135,11 +121,11 @@ def train():
     with tf.name_scope('model'):
         myModel = Model(x, yTrue, nNeurons, FLAGS.learning_rate, FLAGS.lambda_lagrange)
 
+    #initialize global and local (for accuracy measurement) variables
     init_global = tf.global_variables_initializer()
     init_local = tf.local_variables_initializer()
     sess.run([init_global, init_local])
-    #init = tf.global_variables_initializer()
-    #sess.run(init)
+
     # Merge all the summaries and write them out to
     with tf.name_scope('monitor'):
         merged = tf.summary.merge_all()
@@ -177,7 +163,6 @@ def train():
     myValidationWriter.close()
     # Save the model to disk.
     y = tf.get_default_graph().get_operation_by_name("model/output/Identity").outputs[0]
-    #y = tf.get_default_graph().get_operation_by_name("model/output/Sigmoid").outputs[0]
 
     tf.saved_model.simple_save(sess, FLAGS.model_dir,
                                inputs={"x": x, "yTrue": yTrue},

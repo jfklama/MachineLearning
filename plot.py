@@ -37,7 +37,6 @@ def makePlots(sess, myDataManipulations):
 
     features = myDataManipulations.features
     featuresCopy = np.copy(features)
-    #featuresNames = myDataManipulations.featuresNames
     labels = myDataManipulations.labels
     nData = myDataManipulations.nData
     #truePDF = myDataManipulations.PDF
@@ -61,87 +60,39 @@ def makePlots(sess, myDataManipulations):
 
     plt.figure(1)
     plt.hist(signalResponse, bins = 20, label="fake tau")
-    #plt.hist(backgroundResponse, bins=20, label="fake tau")
     plt.legend(loc=2)
     plt.show(block=False)
 
     plt.figure(2)
-    #plt.hist(signalResponse, bins = 20, label="true tau")
     plt.hist(backgroundResponse, bins=20, label="true tau")
     plt.legend(loc=2)
     plt.show()
 
-    '''
-    plt.figure(3)
-    for model, aResult in modelResults.items():
-        print('ROC AUC score for {} model: '.format(model), 1.0 - roc_auc_score(labels, aResult))
-        fpr, tpr, thr = roc_curve(labels, aResult, pos_label=1)
-        plt.semilogy(tpr, fpr, label=model)
-        plt.grid(True)
-        plt.xlim((0.2, 1.0))
-        plt.ylim((2E-4, 0.2))
-        plt.ylabel('False positive rate')
-        plt.xlabel('True positive rate')
-
-    plt.legend(loc=2)
-    plt.show()
-    '''
-
     print(labels.shape, pT.shape)
 
+    nData = len(pT)
     nbins = 8
-    pT_bins = np.empty( int(len(pT)*nbins/(nData)) )
-    Eta_bins = np.empty( int(len(Eta)*nbins/(nData)) )
-    trueFakesPt = np.zeros( int(len(pT)*nbins/(nData)) )
-    trueFakesEta = np.zeros( int(len(Eta)*nbins/(nData)) )
+    pT_bins = getBinnedVar('pT', nbins)
+    Eta_bins = getBinnedVar('Eta', nbins)
+    trueFakesPt = getFR_PtHisto(pT, labels, nbins, nData)
+    trueFakesEta = getFR_EtaHisto(Eta, labels, nbins, nData)
 
-    print(labels)
+    print('pT bins: ', pT_bins.size, 'Eta bins: ', Eta_bins.size)
 
-    idx = 0
-    i = 0
-    while idx < len(pT_bins):
-        while i < nData/nbins*(1+idx):
-            if labels[i] ==1:
-                trueFakesPt[idx] += 1
-            i += 1
-        pT_bins[idx] = idx*(80/nbins) + 20
-        idx += 1
-
-    idx = 0
-    i = 0
-    while idx < len(Eta_bins):
-        while i < nData/nbins*(1+idx):
-            if labels[i] ==1:
-                trueFakesEta[idx] += 1
-            i += 1
-        Eta_bins[idx] = idx*(2.3/nbins)
-        idx += 1
-
-    trueFakesPt = 100*trueFakesPt/(nData)
-    trueFakesEta = 100*trueFakesEta/(nData)
-
-    print(trueFakesPt, trueFakesEta)
-
+    #plot model prediction vs. input data histos
     plt.figure(1)
     plt.scatter(pT_bins, trueFakesPt, label = 'Input N_{fake}/N_{all}')
-    #plt.scatter(features[:,1], truePDF, s=3, label = 'True PDF input')
     plt.scatter(pT, modelResult, s=1, label = 'Model prediction')
     plt.xlabel('pT')
-
     plt.legend(loc=0)
     plt.show(block=False)
 
     plt.figure(2)
     plt.scatter(Eta_bins, trueFakesEta, label = 'Input N_{fake}/N_{all}')
-    #plt.scatter(features[:,1], truePDF, s=3, label = 'True PDF input')
     plt.scatter(Eta, modelResult, s=1, label = 'Model prediction')
     plt.xlabel('Eta')
-
     plt.legend(loc=0)
     plt.show()
-
-
-
 
 
 ##############################################################################
@@ -158,7 +109,6 @@ def plot():
         nEpochs = 1
         batchSize = 100
         nFolds = 2
-        #fileName = FLAGS.test_data_file
 
         myDataManipulations = dataManipulations(nFolds, nEpochs, batchSize)
 

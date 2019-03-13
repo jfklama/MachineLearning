@@ -21,20 +21,27 @@ class dataManipulations:
         #Create data and PDF
         Eta = getRandomEta(nData)
         Pt = getRandomPt(nData)
-        PDF = getEtaPDF(Eta)*getPtPDF(Pt)
+        #PDF = getEtaPDF(Eta)*getPtPDF(Pt)
+        PDF = getPtPDF(Pt)
+        labels = getLabels(PDF)
         #PDF = PDF / np.linalg.norm(PDF) #normalization
+        #plt.scatter(Eta, PDF)
+        #plt.scatter(getBinnedVar('Eta', 8), getFR_EtaHisto(Eta, labels, 8, nData))
+        #plt.show()
 
         Eta = np.reshape(Eta, (-1,1))
         Pt = np.reshape(Pt, (-1,1))
         PDF = np.reshape(PDF, (-1,1))
 
-        features = np.hstack((PDF, Eta, Pt))
+        #features = np.hstack((PDF, Eta, Pt))
+        features = np.hstack((PDF, Pt))
 
         np.random.shuffle(features)
 
         PDF = features[:,0]
         features = features[:,1:] #only pT and Eta are features
         labels = getLabels(PDF)
+
 
         print("Input data shape:",features.shape)
 
@@ -44,7 +51,6 @@ class dataManipulations:
 
         self.features_placeholder = tf.placeholder(tf.float32)
         self.labels_placeholder = tf.placeholder(tf.float32)
-        #self.fastMTT = fastMTT
         self.features = features
         self.labels = labels
         self.PDF = PDF

@@ -41,8 +41,8 @@ def makePlots(sess, myDataManipulations):
     nData = myDataManipulations.nData
     #truePDF = myDataManipulations.PDF
 
-    pT = features[:,1]
-    Eta = features[:,0]
+    pT = features[:,0]
+    #Eta = features[:,0]
 
     result = sess.run([y, yTrue, accuracy], feed_dict={x: featuresCopy, yTrue: labels, dropout_prob: 0.0, trainingMode: False})
     modelResult = result[0]
@@ -52,6 +52,8 @@ def makePlots(sess, myDataManipulations):
 
     print("Test sample accuracy:",result[2])
 
+    print(labels.shape, modelResult.shape)
+
     indexesS = labels==1
     signalResponse = modelResult[indexesS]
 
@@ -60,11 +62,15 @@ def makePlots(sess, myDataManipulations):
 
     plt.figure(1)
     plt.hist(signalResponse, bins = 20, label="fake tau")
+    plt.xlabel('Model prediction')
+    plt.ylabel('Events')
     plt.legend(loc=2)
     plt.show(block=False)
 
     plt.figure(2)
     plt.hist(backgroundResponse, bins=20, label="true tau")
+    plt.xlabel('Model prediction')
+    plt.ylabel('Events')
     plt.legend(loc=2)
     plt.show()
 
@@ -75,25 +81,25 @@ def makePlots(sess, myDataManipulations):
     pT_bins = getBinnedVar('pT', nbins)
     Eta_bins = getBinnedVar('Eta', nbins)
     trueFakesPt = getFR_PtHisto(pT, labels, nbins, nData)
-    trueFakesEta = getFR_EtaHisto(Eta, labels, nbins, nData)
+    #trueFakesEta = getFR_EtaHisto(Eta, labels, nbins, nData)
 
     print('pT bins: ', pT_bins.size, 'Eta bins: ', Eta_bins.size)
 
     #plot model prediction vs. input data histos
     plt.figure(1)
-    plt.scatter(pT_bins, trueFakesPt, label = 'Input N_{fake}/N_{all}')
     plt.scatter(pT, modelResult, s=1, label = 'Model prediction')
+    plt.scatter(pT_bins, 50*trueFakesPt, label = 'Input N_{fake}/N_{all}')
     plt.xlabel('pT')
     plt.legend(loc=0)
-    plt.show(block=False)
-
+    plt.show()
+    '''
     plt.figure(2)
-    plt.scatter(Eta_bins, trueFakesEta, label = 'Input N_{fake}/N_{all}')
-    plt.scatter(Eta, modelResult, s=1, label = 'Model prediction')
+    plt.scatter(Eta, modelResult, s=0.1, label = 'Model prediction')
+    plt.scatter(Eta_bins, 50*trueFakesEta, label = 'Input N_{fake}/N_{all}')
     plt.xlabel('Eta')
     plt.legend(loc=0)
     plt.show()
-
+    '''
 
 ##############################################################################
 ##############################################################################
